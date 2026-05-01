@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { bootstrap } from "@/lib/bootstrap";
@@ -22,14 +23,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        if (parsed.data.email !== env().ADMIN_EMAIL) return null;
-        if (parsed.data.password !== env().ADMIN_PASSWORD) return null;
 
         await bootstrap();
-        const user = await (await users()).findOne({ email: parsed.data.email });
-        if (!user) return null;
 
-        return { id: user._id.toString(), email: user.email, name: user.name };
+        const user = await (await users()).findOne({
+          email: parsed.data.email.toLowerCase(),
+          active: true,
+        });
+        if (!user || !user.passwordHash) return null;
+
+        const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
+        if (!ok) return null;
+
+        return {
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
       },
     }),
   ],
@@ -37,11 +48,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     authorized: ({ auth }) => !!auth?.user,
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        token.role = (user as { role?: string }).role;
+      }
       return token;
     },
     async session({ session, token }) {
       if (token?.id) session.user.id = token.id as string;
+      if (token?.role) session.user.role = token.role as "super_admin" | "host";
       return session;
     },
   },

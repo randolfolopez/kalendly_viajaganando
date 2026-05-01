@@ -11,12 +11,19 @@ export type LocationSpec =
   | { type: "phone"; phoneNumber: string }
   | { type: "custom"; customText: string };
 
+export type UserRole = "super_admin" | "host";
+
 export interface UserDoc {
   _id: ObjectId;
   email: string;
   name: string;
   bio: string | null;
   defaultTimezone: string;
+  passwordHash: string;
+  role: UserRole;
+  slug: string | null;
+  active: boolean;
+  createdBy: ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
