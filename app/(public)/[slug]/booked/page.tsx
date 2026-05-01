@@ -6,6 +6,7 @@ import { Check, Video, Mail } from "lucide-react";
 import { bookings, eventTypes } from "@/lib/collections";
 import { isValidTokenShape } from "@/lib/tokens";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { BookedTracker } from "@/components/meta/BookedTracker";
 
 export default async function BookedPage({
   params,
@@ -28,8 +29,15 @@ export default async function BookedPage({
   const labelDate = formatInTimeZone(dt, booking.guestTimezone, "EEEE, MMMM d");
   const labelTime = formatInTimeZone(dt, booking.guestTimezone, "h:mm a");
 
+  const country = booking.customAnswers?.country ?? booking.customAnswers?.pais;
+
   return (
     <main className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 pt-6 md:pt-10 animate-fade-in">
+      <BookedTracker
+        bookingId={booking._id.toString()}
+        eventTypeSlug={slug}
+        country={country}
+      />
       <div className="mb-12 flex items-center justify-end">
         <ThemeToggle />
       </div>
