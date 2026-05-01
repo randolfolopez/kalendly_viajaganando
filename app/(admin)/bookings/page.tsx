@@ -2,6 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { bookings } from "@/lib/collections";
 import { BookingsTable } from "@/components/admin/BookingsTable";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { userScopeFilter } from "@/lib/scope";
+import type { BookingDoc } from "@/lib/types";
 
 const tabs = [
   { id: "upcoming", label: "Upcoming" },
@@ -14,6 +17,7 @@ export default async function BookingsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const session = await requireAdmin();
   const sp = await searchParams;
   const tab = (sp.tab ?? "upcoming") as (typeof tabs)[number]["id"];
   const now = new Date();
@@ -25,7 +29,7 @@ export default async function BookingsPage({
         : { status: "confirmed" as const, startUtc: { $gte: now } };
   const list = await (await bookings())
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .find(filter as any)
+    .find({ ...filter, ...userScopeFilter<BookingDoc>(session) } as any)
     .sort({ startUtc: tab === "past" ? -1 : 1 })
     .limit(100)
     .toArray();

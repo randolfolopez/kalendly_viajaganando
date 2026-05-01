@@ -6,10 +6,17 @@ import { ObjectId } from "mongodb";
 import { notFound } from "next/navigation";
 import { EventTypeForm } from "@/components/admin/EventTypeForm";
 import { eventTypes } from "@/lib/collections";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { userScopeFilter } from "@/lib/scope";
+import type { EventTypeDoc } from "@/lib/types";
 
 export default async function EditEventType({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const evt = await (await eventTypes()).findOne({ _id: new ObjectId(id) });
+  const session = await requireAdmin();
+  const evt = await (await eventTypes()).findOne({
+    _id: new ObjectId(id),
+    ...userScopeFilter<EventTypeDoc>(session),
+  });
   if (!evt) notFound();
 
   const initial = {

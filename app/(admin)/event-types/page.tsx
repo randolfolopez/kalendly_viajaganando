@@ -6,9 +6,16 @@ import { eventTypes } from "@/lib/collections";
 import { Button } from "@/components/ui/button";
 import { EventTypeCard } from "@/components/admin/EventTypeCard";
 import { env } from "@/lib/env";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { userScopeFilter } from "@/lib/scope";
+import type { EventTypeDoc } from "@/lib/types";
 
 export default async function EventTypesPage() {
-  const list = await (await eventTypes()).find().sort({ position: 1 }).toArray();
+  const session = await requireAdmin();
+  const list = await (await eventTypes())
+    .find(userScopeFilter<EventTypeDoc>(session))
+    .sort({ position: 1 })
+    .toArray();
   const activeCount = list.filter((e) => e.active).length;
 
   return (

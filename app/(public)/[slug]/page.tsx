@@ -23,10 +23,11 @@ export default async function BookingPage({
   if (!evt) notFound();
 
   const integ = await (await integrations()).findOne({
+    userId: evt.userId,
     provider: "google_calendar",
     status: "ACTIVE",
   });
-  const avail = integ ? await (await availability()).findOne({ userId: integ.userId }) : null;
+  const avail = integ ? await (await availability()).findOne({ userId: evt.userId }) : null;
 
   let slots: { startUtc: string; endUtc: string }[] = [];
   let unavailable = false;

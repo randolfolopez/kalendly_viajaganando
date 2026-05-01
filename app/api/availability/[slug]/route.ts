@@ -11,10 +11,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   const evt = await (await eventTypes()).findOne({ slug, active: true });
   if (!evt) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const integ = await (await integrations()).findOne({ provider: "google_calendar", status: "ACTIVE" });
+  const integ = await (await integrations()).findOne({
+    userId: evt.userId,
+    provider: "google_calendar",
+    status: "ACTIVE",
+  });
   if (!integ) return NextResponse.json({ error: "calendar_not_connected" }, { status: 503 });
 
-  const avail = await (await availability()).findOne({ userId: integ.userId });
+  const avail = await (await availability()).findOne({ userId: evt.userId });
   if (!avail) return NextResponse.json({ error: "no_availability" }, { status: 503 });
 
   const now = new Date();

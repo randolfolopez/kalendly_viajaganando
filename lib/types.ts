@@ -45,6 +45,7 @@ export interface IntegrationDoc {
 
 export interface EventTypeDoc {
   _id: ObjectId;
+  userId: ObjectId;
   slug: string;
   title: string;
   description: string;
@@ -84,6 +85,7 @@ export type BookingStatus = "confirmed" | "cancelled" | "rescheduled";
 
 export interface BookingDoc {
   _id: ObjectId;
+  userId: ObjectId;
   eventTypeSlug: string;
   eventTypeId: ObjectId;
   guestName: string;

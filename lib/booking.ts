@@ -26,13 +26,18 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingD
   const evt = await (await eventTypes()).findOne({ slug: input.slug, active: true });
   if (!evt) throw new BookingError("not_found", "Event type not found");
 
-  const integration = await (await integrations()).findOne({ provider: "google_calendar", status: "ACTIVE" });
+  // Find the integration of the event type owner (the host being booked)
+  const integration = await (await integrations()).findOne({
+    userId: evt.userId,
+    provider: "google_calendar",
+    status: "ACTIVE",
+  });
   if (!integration) throw new BookingError("calendar", "Calendar not connected");
 
-  const user = await (await users()).findOne({ _id: integration.userId });
+  const user = await (await users()).findOne({ _id: evt.userId });
   if (!user) throw new BookingError("not_found", "User not found");
 
-  const avail = await (await availability()).findOne({ userId: user._id });
+  const avail = await (await availability()).findOne({ userId: evt.userId });
   if (!avail) throw new BookingError("not_found", "Availability not configured");
 
   const startUtc = input.startUtc;
@@ -77,6 +82,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingD
 
   const doc: BookingDoc = {
     _id: new ObjectId(),
+    userId: evt.userId,
     eventTypeSlug: evt.slug,
     eventTypeId: evt._id,
     guestName: input.guestName,
@@ -112,7 +118,11 @@ export async function cancelBooking(token: string): Promise<BookingDoc> {
 
   await col.updateOne({ _id: booking._id }, { $set: { status: "cancelled", cancelledAt: new Date() } });
 
-  const integration = await (await integrations()).findOne({ provider: "google_calendar", status: "ACTIVE" });
+  const integration = await (await integrations()).findOne({
+    userId: booking.userId,
+    provider: "google_calendar",
+    status: "ACTIVE",
+  });
   if (integration) {
     await deleteCalendarEvent(integration.composioUserId, integration.calendarId, booking.googleEventId).catch(() => {});
   }
@@ -140,7 +150,11 @@ export async function rescheduleBooking(token: string, newStartUtc: Date): Promi
     { $set: { status: "rescheduled", rescheduledToBookingId: newBooking._id, cancelledAt: new Date() } },
   );
 
-  const integration = await (await integrations()).findOne({ provider: "google_calendar", status: "ACTIVE" });
+  const integration = await (await integrations()).findOne({
+    userId: original.userId,
+    provider: "google_calendar",
+    status: "ACTIVE",
+  });
   if (integration) {
     await deleteCalendarEvent(integration.composioUserId, integration.calendarId, original.googleEventId).catch(() => {});
   }
