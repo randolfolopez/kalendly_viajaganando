@@ -27,7 +27,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   let busy: Array<{ start: Date; end: Date }>;
   try {
     busy = await getBusyTimes(integ.composioUserId, integ.calendarId, now, horizon, avail.timezone);
-  } catch {
+  } catch (err) {
+    // Log the provider's real error (expired/revoked Composio connection, Google API
+    // error...) — the public response stays generic
+    console.error("[availability] getBusyTimes failed", {
+      slug,
+      calendarId: integ.calendarId,
+      error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
     return NextResponse.json({ error: "calendar_unavailable" }, { status: 503 });
   }
 
