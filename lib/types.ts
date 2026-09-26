@@ -83,6 +83,21 @@ export interface AvailabilityDoc {
 
 export type BookingStatus = "confirmed" | "cancelled" | "rescheduled";
 
+export interface BookingAttribution {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  fbclid?: string;
+  /** Meta _fbc cookie (or built from fbclid). */
+  fbc?: string;
+  /** Meta _fbp cookie. */
+  fbp?: string;
+  clientIp?: string;
+  clientUserAgent?: string;
+}
+
 export interface BookingDoc {
   _id: ObjectId;
   userId: ObjectId;
@@ -99,6 +114,12 @@ export interface BookingDoc {
   manageToken: string;
   status: BookingStatus;
   rescheduledToBookingId: ObjectId | null;
+  /** Original booking when this one was created by a reschedule (not a new Lead). */
+  rescheduledFromBookingId?: ObjectId | null;
+  /** When the Pixel Lead fired — server-side guard against duplicates. */
+  leadTrackedAt?: Date | null;
+  /** UTM, fbclid and Pixel identifiers for CPL-by-funnel and Conversions API. */
+  attribution?: BookingAttribution | null;
   createdAt: Date;
   cancelledAt: Date | null;
 }

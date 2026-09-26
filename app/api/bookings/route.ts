@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { bookingRequestSchema } from "@/lib/validation";
 import { createBooking, BookingError } from "@/lib/booking";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { buildAttribution } from "@/lib/attribution";
+import { BOOKED_COOKIE, BOOKED_COOKIE_OPTIONS } from "@/lib/booked-cookie";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "unknown";
@@ -14,6 +16,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "validation", issues: parsed.error.issues }, { status: 400 });
   }
 
+  const attribution = buildAttribution({
+    params: parsed.data.attribution,
+    fbc: req.cookies.get("_fbc")?.value,
+    fbp: req.cookies.get("_fbp")?.value,
+    clientIp: req.headers.get("x-forwarded-for"),
+    clientUserAgent: req.headers.get("user-agent"),
+  });
+
   try {
     const booking = await createBooking({
       slug: parsed.data.slug,
@@ -22,8 +32,12 @@ export async function POST(req: NextRequest) {
       guestEmail: parsed.data.guestEmail,
       guestTimezone: parsed.data.guestTimezone,
       customAnswers: parsed.data.customAnswers,
+      attribution,
     });
-    return NextResponse.json({ token: booking.manageToken });
+    // The token travels in an httpOnly cookie, never in the confirmation URL
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(BOOKED_COOKIE, booking.manageToken, BOOKED_COOKIE_OPTIONS);
+    return res;
   } catch (err) {
     if (err instanceof BookingError) {
       console.error("[bookings] BookingError", err.code, err.message);

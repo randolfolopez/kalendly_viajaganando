@@ -89,4 +89,6 @@ export const bookingRequestSchema = z.object({
   guestEmail: z.email().max(254),
   guestTimezone: z.string().min(1),
   customAnswers: z.record(z.string(), z.string().max(2000)),
+  // utm_* / fbclid captured on the booking page; sanitized again by buildAttribution
+  attribution: z.record(z.string(), z.string().max(500)).optional(),
 });

@@ -65,8 +65,8 @@ export function BookingCalendar({
           body: JSON.stringify({ newStartUtc: selected.startUtc }),
         });
         if (res.ok) {
-          const { token } = await res.json();
-          router.push(`/${slug}/booked?token=${token}`);
+          // New manage token arrives as an httpOnly cookie
+          router.push(`/${slug}/booked`);
         } else {
           setError("Could not reschedule. Please try another time.");
         }
