@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import { Check, Video, Mail } from "lucide-react";
@@ -7,21 +8,29 @@ import { bookings, eventTypes } from "@/lib/collections";
 import { isValidTokenShape } from "@/lib/tokens";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { BookedTracker } from "@/components/meta/BookedTracker";
+import { isLeadEligible } from "@/lib/attribution";
+import { BOOKED_COOKIE } from "@/lib/booked-cookie";
 
-export default async function BookedPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ token?: string }>;
-}) {
+export default async function BookedPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const sp = await searchParams;
-  const token = sp.token;
+  // Token comes from the httpOnly cookie set by the booking API, never from the URL
+  const token = (await cookies()).get(BOOKED_COOKIE)?.value;
   if (!token || !isValidTokenShape(token)) notFound();
 
-  const booking = await (await bookings()).findOne({ manageToken: token, eventTypeSlug: slug });
+  const col = await bookings();
+  const booking = await col.findOne({ manageToken: token, eventTypeSlug: slug });
   if (!booking) notFound();
+
+  // Claim the Lead atomically: only the first render of a new (non-rescheduled)
+  // booking fires it, even across tabs or devices.
+  let trackLead = false;
+  if (isLeadEligible(booking)) {
+    const claim = await col.updateOne(
+      { _id: booking._id, status: "confirmed", leadTrackedAt: null, rescheduledFromBookingId: null },
+      { $set: { leadTrackedAt: new Date() } },
+    );
+    trackLead = claim.modifiedCount === 1;
+  }
   const evt = await (await eventTypes()).findOne({ _id: booking.eventTypeId });
   if (!evt) notFound();
 
@@ -33,11 +42,13 @@ export default async function BookedPage({
 
   return (
     <main className="relative mx-auto flex min-h-screen max-w-md flex-col px-6 pt-6 md:pt-10 animate-fade-in">
-      <BookedTracker
-        bookingId={booking._id.toString()}
-        eventTypeSlug={slug}
-        country={country}
-      />
+      {trackLead && (
+        <BookedTracker
+          bookingId={booking._id.toString()}
+          eventTypeSlug={slug}
+          country={country}
+        />
+      )}
       <div className="mb-12 flex items-center justify-end">
         <ThemeToggle />
       </div>

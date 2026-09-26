@@ -5,7 +5,7 @@ import { ymdInTz } from "./timezone";
 import { newManageToken } from "./tokens";
 import { createCalendarEvent, deleteCalendarEvent, getBusyTimes } from "./calendar";
 import { env } from "./env";
-import type { BookingDoc, EventTypeDoc } from "./types";
+import type { BookingAttribution, BookingDoc, EventTypeDoc } from "./types";
 
 export class BookingError extends Error {
   constructor(public readonly code: "slot_taken" | "not_found" | "validation" | "calendar", message: string) {
@@ -20,6 +20,8 @@ interface CreateBookingInput {
   guestEmail: string;
   guestTimezone: string;
   customAnswers: Record<string, string>;
+  attribution?: BookingAttribution | null;
+  rescheduledFromBookingId?: ObjectId | null;
 }
 
 export async function createBooking(input: CreateBookingInput): Promise<BookingDoc> {
@@ -96,6 +98,9 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingD
     manageToken,
     status: "confirmed",
     rescheduledToBookingId: null,
+    rescheduledFromBookingId: input.rescheduledFromBookingId ?? null,
+    leadTrackedAt: null,
+    attribution: input.attribution ?? null,
     createdAt: new Date(),
     cancelledAt: null,
   };
@@ -143,6 +148,9 @@ export async function rescheduleBooking(token: string, newStartUtc: Date): Promi
     guestEmail: original.guestEmail,
     guestTimezone: original.guestTimezone,
     customAnswers: original.customAnswers,
+    // Keep the original ad attribution; mark it so it never counts as a new Lead
+    attribution: original.attribution ?? null,
+    rescheduledFromBookingId: original._id,
   });
 
   await col.updateOne(

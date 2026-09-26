@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { CustomQuestion } from "@/lib/types";
+import { readAttribution } from "@/lib/attribution-client";
 
 interface Props {
   slug: string;
@@ -39,6 +40,7 @@ export function BookingForm({ slug, startUtc, guestTimezone, customQuestions }: 
           guestName: String(form.get("guestName") ?? ""),
           guestEmail: String(form.get("guestEmail") ?? ""),
           customAnswers: answers,
+          attribution: readAttribution(),
         }),
       });
       if (!res.ok) {
@@ -50,8 +52,8 @@ export function BookingForm({ slug, startUtc, guestTimezone, customQuestions }: 
         );
         return;
       }
-      const { token } = await res.json();
-      router.push(`/${slug}/booked?token=${token}`);
+      // The manage token arrives as an httpOnly cookie; keep it out of the URL
+      router.push(`/${slug}/booked`);
     });
   }
 

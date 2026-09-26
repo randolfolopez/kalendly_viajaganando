@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { isValidTokenShape } from "@/lib/tokens";
 import { cancelBooking, rescheduleBooking, BookingError } from "@/lib/booking";
+import { BOOKED_COOKIE, BOOKED_COOKIE_OPTIONS } from "@/lib/booked-cookie";
 
 const patchSchema = z.object({ newStartUtc: z.iso.datetime() });
 
@@ -26,7 +27,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
 
   try {
     const updated = await rescheduleBooking(token, new Date(parsed.data.newStartUtc));
-    return NextResponse.json({ token: updated.manageToken });
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(BOOKED_COOKIE, updated.manageToken, BOOKED_COOKIE_OPTIONS);
+    return res;
   } catch (err) {
     if (err instanceof BookingError) {
       const status = err.code === "slot_taken" ? 409 : err.code === "not_found" ? 404 : err.code === "calendar" ? 503 : 400;
