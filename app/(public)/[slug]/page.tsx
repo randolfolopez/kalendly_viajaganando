@@ -63,7 +63,12 @@ export default async function BookingPage({
         now,
         bookingsPerDay: counts,
       }).map((s) => ({ startUtc: s.startUtc.toISOString(), endUtc: s.endUtc.toISOString() }));
-    } catch {
+    } catch (err) {
+      console.error("[booking-page] slots unavailable", {
+        slug,
+        calendarId: integ.calendarId,
+        error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      });
       unavailable = true;
     }
   } else {
